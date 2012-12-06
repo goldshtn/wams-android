@@ -1,5 +1,12 @@
 package net.sashag.wams.android;
 
+/**
+ * The entry point to Windows Azure Mobile Services. Represents a single
+ * mobile service. Use this class to access your service's data.
+ * 
+ * @author Sasha Goldshtein
+ *
+ */
 public class MobileService {
 
 	private String serviceUrl;

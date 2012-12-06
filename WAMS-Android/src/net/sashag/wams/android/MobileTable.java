@@ -23,6 +23,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.os.Handler;
 import android.util.Log;
 
 public class MobileTable<E> {
@@ -43,8 +44,10 @@ public class MobileTable<E> {
 		}
 		this.tableName = dataTableAnnotation.value();
 		this.executor = Executors.newCachedThreadPool();
-		
-		//TODO: see if it makes sense for the ...Async methods to post the results back to the UI thread with a Handler
+	}
+	
+	public void allAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
+		new QueryBuilder().selectAsync(callback, handler);
 	}
 	
 	public void allAsync(MobileServiceCallbackWithResults<E> callback) {
@@ -57,6 +60,63 @@ public class MobileTable<E> {
 	
 	public QueryBuilder where() {
 		return new QueryBuilder();
+	}
+	
+	private static class HandlerDecoratorWithResults<T> implements MobileServiceCallbackWithResults<T> {
+		private Handler handler;
+		private MobileServiceCallbackWithResults<T> callback;
+		
+		HandlerDecoratorWithResults(Handler handler, MobileServiceCallbackWithResults<T> callback) {
+			this.handler = handler;
+			this.callback = callback;
+		}
+		
+		public void completedSuccessfully(final List<T> results) {
+			handler.post(new Runnable() {
+				public void run() {
+					callback.completedSuccessfully(results);
+				}
+			});
+		}
+
+		public void errorOccurred(final MobileException exception) {
+			handler.post(new Runnable() {
+				public void run() {
+					callback.errorOccurred(exception);
+				}
+			});
+		}
+		
+	}
+	
+	private static class HandlerDecorator implements MobileServiceCallback {
+		private Handler handler;
+		private MobileServiceCallback callback;
+		
+		HandlerDecorator(Handler handler, MobileServiceCallback callback) {
+			this.handler = handler;
+			this.callback = callback;
+		}
+		
+		public void completedSuccessfully() {
+			handler.post(new Runnable() {
+				public void run() {
+					callback.completedSuccessfully();
+				}
+			});
+		}
+
+		public void errorOccurred(final MobileException exception) {
+			handler.post(new Runnable() {
+				public void run() {
+					callback.errorOccurred(exception);
+				}
+			});
+		}
+	}
+	
+	public void insertAsync(E item, MobileServiceCallback callback, Handler handler) {
+		insertAsync(item, new HandlerDecorator(handler, callback));
 	}
 	
 	public void insertAsync(final E item, final MobileServiceCallback callback) {
@@ -123,6 +183,10 @@ public class MobileTable<E> {
 		throw new MobileException("Error creating new item, status code: " + statusCode);
 	}
 	
+	public void updateAsync(E item, MobileServiceCallback callback, Handler handler) {
+		updateAsync(item, new HandlerDecorator(handler, callback));
+	}
+	
 	public void updateAsync(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
@@ -164,6 +228,10 @@ public class MobileTable<E> {
 		
 		throw new MobileException("Error updating item, status code: " + statusCode);
 
+	}
+	
+	public void deleteAsync(E item, MobileServiceCallback callback, Handler handler) {
+		deleteAsync(item, new HandlerDecorator(handler, callback));
 	}
 	
 	public void deleteAsync(final E item, final MobileServiceCallback callback) {
@@ -365,6 +433,10 @@ public class MobileTable<E> {
 				}
 			}
 			return result;
+		}
+		
+		public void selectAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
+			selectAsync(new HandlerDecoratorWithResults<E>(handler, callback));
 		}
 		
 		public void selectAsync(final MobileServiceCallbackWithResults<E> callback) {
