@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -29,6 +31,7 @@ public class MobileTable<E> {
 	private final String apiKey;
 	private final String tableName;
 	private final Class<E> clazz;
+	private final Executor executor;
 	
 	MobileTable(String serviceUrl, String apiKey, Class<E> clazz) {
 		this.serviceUrl = serviceUrl;
@@ -39,6 +42,13 @@ public class MobileTable<E> {
 			throw new InvalidParameterException("Only classes annotated with @DataTable can be used with MobileTable");
 		}
 		this.tableName = dataTableAnnotation.value();
+		this.executor = Executors.newCachedThreadPool();
+		
+		//TODO: see if it makes sense for the ...Async methods to post the results back to the UI thread with a Handler
+	}
+	
+	public void allAsync(MobileServiceCallbackWithResults<E> callback) {
+		new QueryBuilder().selectAsync(callback);
 	}
 	
 	public List<E> all() throws MobileException {
@@ -47,6 +57,19 @@ public class MobileTable<E> {
 	
 	public QueryBuilder where() {
 		return new QueryBuilder();
+	}
+	
+	public void insertAsync(final E item, final MobileServiceCallback callback) {
+		executor.execute(new Runnable() {
+			public void run() {
+				try {
+					insert(item);
+					callback.completedSuccessfully();
+				} catch (MobileException e) {
+					callback.errorOccurred(e);
+				}
+			}
+		});
 	}
 	
 	public void insert(E item) throws MobileException {
@@ -100,6 +123,19 @@ public class MobileTable<E> {
 		throw new MobileException("Error creating new item, status code: " + statusCode);
 	}
 	
+	public void updateAsync(final E item, final MobileServiceCallback callback) {
+		executor.execute(new Runnable() {
+			public void run() {
+				try {
+					update(item);
+					callback.completedSuccessfully();
+				} catch (MobileException e) {
+					callback.errorOccurred(e);
+				}
+			}
+		});
+	}
+	
 	public void update(E item) throws MobileException {
 		int statusCode;
 		try {
@@ -128,6 +164,19 @@ public class MobileTable<E> {
 		
 		throw new MobileException("Error updating item, status code: " + statusCode);
 
+	}
+	
+	public void deleteAsync(final E item, final MobileServiceCallback callback) {
+		executor.execute(new Runnable() {
+			public void run() {
+				try {
+					delete(item);
+					callback.completedSuccessfully();
+				} catch (MobileException e) {
+					callback.errorOccurred(e);
+				}
+			}
+		});
 	}
 	
 	public void delete(E item) throws MobileException {
@@ -194,6 +243,8 @@ public class MobileTable<E> {
 		private int skip = -1;
 		private String[] orderBy;
 		private String[] orderByDesc;
+		
+		private QueryBuilder() { }
 		
 		public QueryBuilder equal(String column, Object value) {
 			operands.put(column, new QueryOperand(EQUAL, value.toString()));
@@ -314,6 +365,19 @@ public class MobileTable<E> {
 				}
 			}
 			return result;
+		}
+		
+		public void selectAsync(final MobileServiceCallbackWithResults<E> callback) {
+			executor.execute(new Runnable() {
+				public void run() {
+					try {
+						List<E> results = select();
+						callback.completedSuccessfully(results);
+					} catch (MobileException e) {
+						callback.errorOccurred(e);
+					}
+				}
+			});
 		}
 		
 		public List<E> select() throws MobileException {
