@@ -7,7 +7,7 @@ import java.security.InvalidParameterException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class Serializer {
+class Serializer {
 
 	static int getIdFrom(Object obj) throws IllegalArgumentException, IllegalAccessException {
 		Class<?> clazz = obj.getClass();

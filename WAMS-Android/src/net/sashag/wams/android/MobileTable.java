@@ -26,6 +26,14 @@ import org.json.JSONObject;
 import android.os.Handler;
 import android.util.Log;
 
+/**
+ * Represents a data table in a mobile service. Use this class to perform
+ * synchronous and asynchronous CRUD operations, including complex queries.
+ * 
+ * @author Sasha Goldshtein
+ *
+ * @param <E> the type of elements the table contains (a POJO decorated by {@link DataTable})
+ */
 public class MobileTable<E> {
 
 	private final String serviceUrl;
@@ -46,18 +54,50 @@ public class MobileTable<E> {
 		this.executor = Executors.newCachedThreadPool();
 	}
 	
+	/**
+	 * Retrieves all elements in the mobile table and posts the specified callback to
+	 * the provided {@link Handler} when the results are available or an exception occurs.
+	 * 
+	 * @param callback	called when the results are available or an exception occurs
+	 * @param handler	callbacks are posted to this handler instead of the default thread
+	 * 					that executed the operation
+	 */
 	public void allAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
 		new QueryBuilder().selectAsync(callback, handler);
 	}
 	
+	/**
+	 * Retrieves all elements in the mobile table and calls the specified callback when
+	 * the results are available or an exception occurs.
+	 * 
+	 * @param callback	called when the results are available or an exception occurs
+	 */
 	public void allAsync(MobileServiceCallbackWithResults<E> callback) {
 		new QueryBuilder().selectAsync(callback);
 	}
 	
+	/**
+	 * Retrieves all elements in the mobile table and returns them synchronously.
+	 * 
+	 * @return					all elements in the mobile table, or an empty collection
+	 * @throws MobileException	thrown if an error occurred while retrieving the elements
+	 */
 	public List<E> all() throws MobileException {
 		return new QueryBuilder().select();
 	}
 	
+	/**
+	 * Begins a query specification for retrieving elements from a mobile table. Call additional
+	 * methods to qualify the query, and then finally call {@link MobileTable.QueryBuilder#select select}
+	 * to retrieve the results. If all elements are desired, it is simpler to call {@link all}.
+	 * <p>
+	 * An example of constructing a query:
+	 * <pre>
+	 * mobileTable.where().eq("published", true).gt("bedrooms", 2).select();
+	 * </pre>
+	 * 
+	 * @return	a {@link QueryBuilder} object that you can use to further customize the query
+	 */
 	public QueryBuilder where() {
 		return new QueryBuilder();
 	}
@@ -132,6 +172,13 @@ public class MobileTable<E> {
 		});
 	}
 	
+	/**
+	 * Inserts the specified item into the mobile table. The provided item is modified to include
+	 * an id (in the field decorated by the {@link Key} annotation) returned from the mobile service.
+	 * 
+	 * @param item				the item to insert
+	 * @throws MobileException	thrown if an error occurred while inserting the item
+	 */
 	public void insert(E item) throws MobileException {
 		String insertUrl = getInsertUrl();
 		int statusCode;
@@ -155,7 +202,7 @@ public class MobileTable<E> {
 				bodyOutput.close();
 				
 				statusCode = urlConnection.getResponseCode();
-				Log.i("MobileTable", "HTTP POST request for insert returned status code: " + statusCode);
+				Log.d("MobileTable", "HTTP POST request for insert returned status code: " + statusCode);
 				
 				InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 				BufferedReader reader = new BufferedReader(new InputStreamReader(in));
@@ -177,7 +224,7 @@ public class MobileTable<E> {
 				}
 			}
 		} catch (Exception e) {
-			throw new MobileException("Error inserting item", e);
+			throw new MobileException("Error creating item", e);
 		}
 		
 		throw new MobileException("Error creating new item, status code: " + statusCode);
@@ -266,7 +313,7 @@ public class MobileTable<E> {
 				}
 			}
 		} catch (Exception e) {
-			throw new MobileException("Error inserting item", e);
+			throw new MobileException("Error deleting item", e);
 		}
 		if (statusCode == HttpStatus.SC_NO_CONTENT)
 			return; //Successfully deleted the item
