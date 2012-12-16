@@ -93,7 +93,7 @@ public class MobileTable<E> {
 	 * <p>
 	 * An example of constructing a query:
 	 * <pre>
-	 * mobileTable.where().eq("published", true).gt("bedrooms", 2).select();
+	 * mobileTable.where().equal("published", true).gt("bedrooms", 2).select();
 	 * </pre>
 	 * 
 	 * @return	a {@link QueryBuilder} object that you can use to further customize the query
@@ -155,10 +155,31 @@ public class MobileTable<E> {
 		}
 	}
 	
+	/**
+	 * Inserts the specified item into the mobile table, and posts the specified callback
+	 * to the provided {@link Handler} when the operation completes. The provided item is
+	 * modified to include an id (in the field decorated by the {@link Key} annotation)
+	 * returned from the mobile service.
+	 * 
+	 * @param item		the item to insert
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 * @param handler	callbacks are posted to this handler instead of the thread that
+	 * 					performed the operation
+	 */
 	public void insertAsync(E item, MobileServiceCallback callback, Handler handler) {
 		insertAsync(item, new HandlerDecorator(handler, callback));
 	}
 	
+	/**
+	 * Inserts the specified item into the mobile table, and calls the specified callback
+	 * when the operation completes. The provided item is modified to include an id (in the
+	 * field decorated by the {@link Key} annotation) returned from the mobile service.
+	 * 
+	 * @param item		the item to insert
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 */
 	public void insertAsync(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
@@ -230,10 +251,32 @@ public class MobileTable<E> {
 		throw new MobileException("Error creating new item, status code: " + statusCode);
 	}
 	
+	/**
+	 * Updates the mobile table with the new information for the provided item. The id field
+	 * (the field decorated with the {@link Key} annotation) must be set to the item's id for 
+	 * the update to succeed. When the operation completes, a callback is posted to the provided
+	 * {@link Handler}.
+	 * 
+	 * @param item		the item to update
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 * @param handler	the callback is posted to this handler instead of the thread that performed
+	 * 					the operation
+	 */
 	public void updateAsync(E item, MobileServiceCallback callback, Handler handler) {
 		updateAsync(item, new HandlerDecorator(handler, callback));
 	}
 	
+	/**
+	 * Updates the mobile table with the new information for the provided item. The id field
+	 * (the field decorated with the {@link Key} annotation) must be set to the item's id for 
+	 * the update to succeed. When the operation completes, the provided callback is invoked
+	 * with exception details if an error occurred.
+	 * 
+	 * @param item		the item to update
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 */
 	public void updateAsync(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
@@ -247,6 +290,14 @@ public class MobileTable<E> {
 		});
 	}
 	
+	/**
+	 * Updates the mobile table with the new information for the provided item. The id field
+	 * (the field decorated with the {@link Key} annotation) must be set to the item's id for 
+	 * the update to succeed.
+	 * 
+	 * @param item				the item to update
+	 * @throws MobileException	thrown if an error occurred while updating the item
+	 */
 	public void update(E item) throws MobileException {
 		int statusCode;
 		try {
@@ -277,10 +328,30 @@ public class MobileTable<E> {
 
 	}
 	
+	/**
+	 * Deletes the specified item from the mobile table. The id field (the field decorated with
+	 * the {@link Key} must be set to the item's id for the delete to succeed. When the operation
+	 * completes, the provided callback is posted to the specified {@link Handler}.
+	 * 
+	 * @param item		the item to delete
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 * @param handler	the callback is posted to this handler instead of the thread that performed
+	 * 					the operation
+	 */
 	public void deleteAsync(E item, MobileServiceCallback callback, Handler handler) {
 		deleteAsync(item, new HandlerDecorator(handler, callback));
 	}
 	
+	/**
+	 * Deletes the specified item from the mobile table. The id field (the field decorated with
+	 * the {@link Key} must be set to the item's id for the delete to succeed. When the operation
+	 * completes, the provided callback is invoked with exception information, if an error occurred.
+	 * 
+	 * @param item		the item to delete
+	 * @param callback	the callback invoked when the operation completes, specifying an
+	 * 					error if one occurred
+	 */
 	public void deleteAsync(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
@@ -294,6 +365,13 @@ public class MobileTable<E> {
 		});
 	}
 	
+	/**
+	 * Deletes the specified item from the mobile table. The id field (the field decorated with
+	 * the {@link Key} must be set to the item's id for the delete to succeed.
+	 * 
+	 * @param item				the item to delete
+	 * @throws MobileException	thrown if an exception occurs while deleting the item
+	 */
 	public void delete(E item) throws MobileException {
 		int statusCode;
 		try {
@@ -337,6 +415,26 @@ public class MobileTable<E> {
 		return serviceUrl + "/tables/" + tableName + "/" + id;
 	}
 	
+	/**
+	 * Helper class for constructing queries using a fluent API. The methods of this class
+	 * enable query construction in steps, such as the following:
+	 * <p>
+	 * <pre>
+	 * table.where().equal("bedrooms", 2).gt("footage", 1337).select();
+	 * </pre>
+	 * <p>
+	 * When the query construction is complete, call {@link select} to obtain the list of
+	 * items matching the query. Note that the query is evaluated on the server; only objects
+	 * matching the query criteria are passed back to the client.
+	 * <p>
+	 * Currently, this class does not support Boolean algebra operations such as AND/OR.
+	 * All filters provided are joined together using an AND clause. In other words, the 
+	 * preceding query retrieves objects with a "bedrooms" property equal to 2 AND a "footage"
+	 * property whose value is greater than 1337.
+	 * 
+	 * @author Sasha Goldshtein
+	 *
+	 */
 	public class QueryBuilder {
 		
 		private static final int EQUAL = 1;
@@ -361,21 +459,50 @@ public class MobileTable<E> {
 		
 		private QueryBuilder() { }
 		
+		/**
+		 * Match objects whose specified property is equal to the specified value.
+		 * 
+		 * @param column	the property to match
+		 * @param value		the value to match
+		 * @return			an instance of this class that can be used for further query customization
+		 */
 		public QueryBuilder equal(String column, Object value) {
 			operands.put(column, new QueryOperand(EQUAL, value.toString()));
 			return this;
 		}
 		
+		/**
+		 * Match objects whose specified numeric property value is greater than the specified value. 
+		 * 
+		 * @param column	the property to match
+		 * @param value		the value to match
+		 * @return			an instance of this class that can be used for further query customization
+		 */
 		public QueryBuilder gt(String column, Object value) {
 			operands.put(column, new QueryOperand(GT, value.toString()));
 			return this;
 		}
 		
+		/**
+		 * Match objects whose specified numeric property value is less than the specified value.
+		 * 
+		 * @param column	the property to match
+		 * @param value		the value to match
+		 * @return			an instance of this class that can be used for further query customization
+		 */
 		public QueryBuilder lt(String column, Object value) {
 			operands.put(column, new QueryOperand(LT, value.toString()));
 			return this;
 		}
 		
+		/**
+		 * Return at most the specified number of items that match all other query criteria.
+		 * 
+		 * @param items				the maximum number of items to match
+		 * @return					an instance of this class that can be used for further query customization
+		 * @throws MobileException	thrown if this method has already been called with this
+		 * 							{@link QueryBuilder} instance 
+		 */
 		public QueryBuilder top(int items) throws MobileException {
 			if (top != -1) {
 				throw new MobileException("Value for top has already been set to: " + top);
@@ -383,7 +510,15 @@ public class MobileTable<E> {
 			top = items;
 			return this;
 		}
-		
+	
+		/**
+		 * Skip the specified number of items that match all other query criteria.
+		 * 
+		 * @param items				the number of items to skip
+		 * @return					an instance of this class that can be used for further query customization
+		 * @throws MobileException	thrown if this method has already been called with this
+		 * 							{@link QueryBuilder} instance 
+		 */
 		public QueryBuilder skip(int items) throws MobileException {
 			if (skip != -1) {
 				throw new MobileException("Value for skip has already been set to: " + skip);
@@ -392,6 +527,15 @@ public class MobileTable<E> {
 			return this;
 		}
 		
+		/**
+		 * Order the results by the following columns, in ascending order.
+		 * 
+		 * @param properties		the columns to order by
+		 * @return					an instance of this class that can be used for further query customization
+		 * @throws MobileException	thrown if this method has already been called with this
+		 * 							{@link QueryBuilder} instance, or if the {@link orderByDesc} method
+		 * 							has already been called with this {@link QueryBuilder} instance 
+		 */
 		public QueryBuilder orderBy(String... properties) throws MobileException {
 			if (orderBy != null) {
 				throw new MobileException("Value for orderBy has already been set");
@@ -403,6 +547,15 @@ public class MobileTable<E> {
 			return this;
 		}
 		
+		/**
+		 * Order the results by the following columns, in descending order.
+		 * 
+		 * @param properties		the columns to order by
+		 * @return					an instance of this class that can be used for further query customization
+		 * @throws MobileException	thrown if this method has already been called with this
+		 * 							{@link QueryBuilder} instance, or if the {@link orderBy} method
+		 * 							has already been called with this {@link QueryBuilder} instance 
+		 */
 		public QueryBuilder orderByDesc(String... properties) throws MobileException {
 			if (orderByDesc != null) {
 				throw new MobileException("Value for orderByDesc has already been set");
@@ -482,10 +635,26 @@ public class MobileTable<E> {
 			return result;
 		}
 		
+		/**
+		 * Evaluates the query and returns the matching items. The results are posted via the
+		 * specified callback to the provided {@link Handler}.
+		 * 
+		 * @param callback	the callback invoked when the operation completes, providing the 
+		 * 					list of items or an exception if one occurred
+		 * @param handler	the callback is posted to this handler instead of the thread that
+		 * 					performed the operation
+		 */
 		public void selectAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
 			selectAsync(new HandlerDecoratorWithResults<E>(handler, callback));
 		}
-		
+
+		/**
+		 * Evaluates the query and returns the matching items. The results are posted via the
+		 * specified callback.
+		 * 
+		 * @param callback	the callback invoked when the operation completes, providing the 
+		 * 					list of items or an exception if one occurred
+		 */
 		public void selectAsync(final MobileServiceCallbackWithResults<E> callback) {
 			executor.execute(new Runnable() {
 				public void run() {
@@ -499,6 +668,11 @@ public class MobileTable<E> {
 			});
 		}
 		
+		/**
+		 * Evaluates the query and returns the matching items.
+		 * 
+		 * @throws MobileException	thrown if an exception occurred while evaluating the query
+		 */
 		public List<E> select() throws MobileException {
 			String queryUrl = buildQueryUrl();
 			try {
