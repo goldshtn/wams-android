@@ -1,5 +1,5 @@
-wams-android
-============
+Introduction to WAMS-Android
+============================
 
 This is the Windows Azure Mobile Services unofficial Android SDK. It is provided with no warranty or support, implied or explicit. Use at your own risk. The code is provided under the Creative Commons Attribution License [http://creativecommons.org/licenses/by/3.0/us/].
 
@@ -10,7 +10,14 @@ This SDK covers the following features of Windows Azure Mobile Services:
 
 To use the SDK, download the source and add the provided project as a library project to your Eclipse workspace. Next, add a library reference from your app to this project. Note that the project requires an minimum API level of 2.2.
 
-Some examples of what you can do with this SDK, assuming you have a Windows Azure Mobile Service set up at the endpoint http://myservice.azure-mobile.net:
+Finally, you need to add the following two string resources to your project if you intend to use GCM push. I recommend that you add them in any case, because then you can use a convenient constructor of the MobileService class.
+
+```xml
+<string name="mobileServiceUrl">https://YOURSERVICENAME.azure-mobile.net</string>
+<string name="mobileServiceApiKey">YOUR_API_KEY</string>
+```
+
+Some examples of what you can do with the data SDK:
 
 ```java
 @DataTable("apartments")
@@ -22,8 +29,8 @@ public class Apartment {
 	@DataMember public boolean published;
 }
 
-String apiKey = getResources().getString(R.string.msApiKey);
-MobileService ms = new MobileService("http://myservice.azure-mobile.net", apiKey);
+//Inside your activity's code:
+MobileService ms = new MobileService(this);
 MobileTable<Apartment> apartments = ms.getTable(Apartment.class);
 
 Apartment newApartment = new Apartment();
@@ -45,4 +52,158 @@ apartments.deleteAsync(newApartment, new MobileServiceCallback() {
 });
 ```
 
-In the future, I plan to add push support (with GCM) and possibly additional features. Pull requests, enhancements, and any other assistance are very welcome.
+Android push setup using GCM
+============================
+
+These instructions explain how to set up Google Cloud Messaging (GCM) push for your Windows Azure Mobile Service, while using this unofficial SDK.
+
+Before you begin, make sure you follow the instructions at [GCM Getting Started](http://developer.android.com/google/gcm/gs.html) -- specifically, you need to follow the instructions for:
+
+* Creating a Google API Project
+* Enabling the GCM Service
+* Obtaining an API Key
+
+You do *not* need to perform the rest of the steps in the GCM Getting Started guide. Instead, follow the instructions below for setting up your application's manifest and implementing an optional service to handle push notifications when the application is not running.
+
+Add a string resource to identify your service
+----------------------------------------------
+
+Add the following string resource in addition to the mobileServiceUrl and mobileServiceApiKey resources you added previously:
+
+```xml
+<string name="mobileServicePushSenderId">YOUR_GCM_SENDER_ID</string>
+```
+
+Modify the manifest
+-------------------
+
+In your manifest, insert the following section outside of the *application* element:
+
+```xml
+<permission
+    android:name="YOUR_PACKAGE_HERE.permission.C2D_MESSAGE"
+    android:protectionLevel="signature" />
+<uses-permission android:name="YOUR_PACKAGE_HERE.permission.C2D_MESSAGE" />
+<uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+<uses-permission android:name="android.permission.GET_ACCOUNTS" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+```
+
+Next, inside the *application* element, add the following section:
+
+```xml
+<receiver
+    android:name="net.sashag.wams.android.WAMSGCMBroadcastReceiver"
+    android:permission="com.google.android.c2dm.permission.SEND" >
+    <intent-filter>
+        <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+        <action android:name="com.google.android.c2dm.intent.REGISTRATION" />
+        <category android:name="YOUR_PACKAGE_HERE" />
+    </intent-filter>
+</receiver>
+<service android:name=".PushHandlerService" />
+```
+
+*NOTE*: In both sections, make sure to replace *YOUR_PACKAGE_HERE* with your actual application package (the whole thing, including the dots, e.g. "net.sashag.rentahome").
+
+*NOTE*: If you do not implement the service described in the next step, replace *.PushHandlerService* with *net.sashag.wams.android.WAMSGCMIntentService*.
+
+Implement an optional service to handle push
+--------------------------------------------
+
+If you'd like to handle push notifications while your application is not running, add a class that extends WAMSGCMIntentService, as follows:
+
+```java
+public class PushHandlerService extends WAMSGCMIntentService {
+    @Override
+    protected void onPushMessage(Intent intent) {
+        //TODO: do something with the intent, the extras are the push payload
+    }
+    
+}
+```
+
+In that case, make sure you use the class name in the appropriate service element in the application manifest, as outlined above.
+
+Register for push on startup
+----------------------------
+
+During your application's startup, e.g. in your activity's onCreate method, insert the following code:
+
+```java
+mobileService = new MobileService(this);
+mobileService.registerPush();
+```
+
+If you want to use a transient push callback (a callback that is only valid for the duration of your application's runtime), use the registerPushWithTransientCallback method instead.
+
+Server side setup for GCM
+=========================
+
+Next, you turn to setting up your Windows Azure Mobile Service to support the client.
+
+The client-side code assumes that a "pushChannel" table exists, so you must first create it. Next, you have to set up a script to handle inserts to that table so that you do not insert duplicate registrations. Finally, you have to perform a push request to GCM with an optional payload.
+
+Script to filter for duplicate channels
+---------------------------------------
+
+Use this as the insert script for the "pushChannel" table.
+
+```javascript
+function insert(item, user, request) {
+    var channelTable = tables.getTable('pushChannel');
+    channelTable
+        .where({ regId: item.regId })
+        .read({ success: insertChannelIfNotFound });
+
+    function insertChannelIfNotFound(existingChannels) {
+        if (existingChannels.length > 0) {
+            request.respond(200, existingChannels[0]);
+        } else {
+            request.execute();
+        }
+    }
+}
+```
+
+Script to push through GCM
+--------------------------
+
+Use this function wherever you need to perform a push through GCM. If necessary, modify the code to push the message to only a subset of clients. Also make sure to insert your push API key in the 'Authorization' header below.
+
+```javascript
+//Sends a GCM push to all registered subscribers from the pushChannel table,
+//with the specified payload body. Note that the payload is limited to about
+//4000 bytes after it's serialized to JSON.
+function sendGcmPush(payload) {
+    var reqModule = require('request');
+    var channelTable = tables.getTable('pushChannel');
+    channelTable.read({
+    	success: function(channels) {
+    		channels.forEach(function(channel) {
+    			reqModule({
+    				url: 'https://android.googleapis.com/gcm/send',
+    				method: 'POST',
+    				headers: {
+    					//TODO: this should be your push API key
+    					'Authorization': 'key=PUSH_API_KEY'
+    				},
+    				json: {
+    					//You could pipe up to 1,000 registration ids here
+    					registration_ids: [channel.regId],
+    					data: payload
+    				}
+    			}, function (err, resp, body) {
+    	            if (err || resp.statusCode !== 200) {
+    	                console.error('Error sending GCM push: ', err);
+    	            } else {
+    	            	console.log('Sent GCM push notification successfully to ' + channel.regId);
+    	            	//TODO: handle dead channels
+    	            }
+                });
+    		});
+    	}
+    });
+}
+```
+To learn more about how to handle dead channels and how to interpret the GCM response in general, consult the [GCM Architecture Overview](http://developer.android.com/google/gcm/gcm.html#response).

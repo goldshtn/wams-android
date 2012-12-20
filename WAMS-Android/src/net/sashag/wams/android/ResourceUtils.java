@@ -3,7 +3,7 @@ package net.sashag.wams.android;
 import android.content.Context;
 import android.content.res.Resources;
 
-public class ResourceUtils {
+class ResourceUtils {
 	
 	private static final String PUSH_SENDER_RESOURCE_ID = "mobileServicePushSenderId";
 	private static final String API_KEY_RESOURCE_ID = "mobileServiceApiKey";

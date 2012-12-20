@@ -15,6 +15,12 @@ class TransientPushCallbacks {
 		}
 	}
 	
+	public static void removeAll() {
+		synchronized(pushCallbacks) {
+			pushCallbacks.clear();
+		}
+	}
+	
 	//TODO: remove API as well, perhaps based on token
 	
 	public static void invokePushCallbacks(Intent intent) {

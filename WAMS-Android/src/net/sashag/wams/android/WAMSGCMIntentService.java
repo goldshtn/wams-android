@@ -8,16 +8,25 @@ import android.util.Log;
 
 import com.google.android.gcm.GCMBaseIntentService;
 
-public abstract class WAMSGCMIntentService extends GCMBaseIntentService {
+/**
+ * An intent service that handles GCM registrations, unregistrations, and push messages.
+ * You extend this service and override the {@link WAMSGCMIntentService.onPushMessage} method
+ * to specify how to handle push messages even if the app is not running when the push
+ * notification is received. 
+ * 
+ * @author Sasha Goldshtein
+ *
+ */
+public class WAMSGCMIntentService extends GCMBaseIntentService {
 
 	@Override
-	protected String[] getSenderIds(Context context) {
+	protected final String[] getSenderIds(Context context) {
 		String senderId = ResourceUtils.getSenderId(context);
 		return new String[] { senderId };
 	}
 
 	@Override
-	protected void onRegistered(Context context, String regId) {
+	protected final void onRegistered(Context context, String regId) {
 		MobileService service = new MobileService(context);
 		MobileTable<PushChannel> channelTable = service.getTable(PushChannel.class);
 		PushChannel pushChannel = new PushChannel(regId);
@@ -32,7 +41,7 @@ public abstract class WAMSGCMIntentService extends GCMBaseIntentService {
 	}
 
 	@Override
-	protected void onUnregistered(Context context, String regId) {
+	protected final void onUnregistered(Context context, String regId) {
 		MobileService service = new MobileService(context);
 		MobileTable<PushChannel> channelTable = service.getTable(PushChannel.class);
 		try {
@@ -53,7 +62,7 @@ public abstract class WAMSGCMIntentService extends GCMBaseIntentService {
 	}
 
 	@Override
-	protected void onMessage(Context context, Intent intent) {
+	protected final void onMessage(Context context, Intent intent) {
 		Log.v("GCMIntentService", "Received push message: " + intent.toString());
 		TransientPushCallbacks.invokePushCallbacks(intent);
 		onPushMessage(intent);
@@ -61,7 +70,14 @@ public abstract class WAMSGCMIntentService extends GCMBaseIntentService {
 	
 	//This method can be overriden by derived classes to process push notifications even if the
 	//app was not running
-	protected void onPushMessage(Intent intent) {
-	}
+	/**
+	 * This method is invoked when a new push message arrives, regardless of whether the
+	 * application is running or not. Override this method to specify how to handle new
+	 * push messages. You cannot override other methods of this class.
+	 * 
+	 * @param intent	the intent that represents the push notification; any push parameters
+	 * 					passed are available as extras on the intent
+	 */
+	protected void onPushMessage(Intent intent) {}
 
 }

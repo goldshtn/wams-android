@@ -9,7 +9,15 @@ import android.util.Log;
 
 import com.google.android.gcm.GCMBroadcastReceiver;
 
+/**
+ * A broadcast receiver that handles GCM registration, unregistration, and push messages.
+ * Locates the GCM intent service or uses the default GCM intent service provided by the library.
+ * 
+ * @author Sasha Goldshtein
+ *
+ */
 public class WAMSGCMBroadcastReceiver extends GCMBroadcastReceiver {
+	
 	@Override
 	protected String getGCMIntentServiceClassName(Context context) {
 		String packageName = context.getPackageName();
