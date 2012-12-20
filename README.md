@@ -1,12 +1,13 @@
 Introduction to WAMS-Android
 ============================
 
-This is the Windows Azure Mobile Services unofficial Android SDK. It is provided with no warranty or support, implied or explicit. Use at your own risk. The code is provided under the Creative Commons Attribution License [http://creativecommons.org/licenses/by/3.0/us/].
+This is the Windows Azure Mobile Services unofficial Android SDK. It is provided with no warranty or support, implied or explicit. Use at your own risk. The code is provided under the [Creative Commons Attribution License](http://creativecommons.org/licenses/by/3.0/us/).
 
 This SDK covers the following features of Windows Azure Mobile Services:
 * Basic CRUD operations on data tables (select, insert, update, delete)
 * Simple query operators (gt, lt, equals)
 * Simple paging operators (top, skip)
+* Push support with GCM and some scripts on the server
 
 To use the SDK, download the source and add the provided project as a library project to your Eclipse workspace. Next, add a library reference from your app to this project. Note that the project requires an minimum API level of 2.2.
 
@@ -104,9 +105,9 @@ Next, inside the *application* element, add the following section:
 <service android:name=".PushHandlerService" />
 ```
 
-*NOTE*: In both sections, make sure to replace *YOUR_PACKAGE_HERE* with your actual application package (the whole thing, including the dots, e.g. "net.sashag.rentahome").
+**NOTE**: In both sections, make sure to replace *YOUR_PACKAGE_HERE* with your actual application package (the whole thing, including the dots, e.g. "net.sashag.rentahome").
 
-*NOTE*: If you do not implement the service described in the next step, replace *.PushHandlerService* with *net.sashag.wams.android.WAMSGCMIntentService*.
+**NOTE**: If you do not implement the service described in the next step, replace *.PushHandlerService* with *net.sashag.wams.android.WAMSGCMIntentService*.
 
 Implement an optional service to handle push
 --------------------------------------------
@@ -117,9 +118,10 @@ If you'd like to handle push notifications while your application is not running
 public class PushHandlerService extends WAMSGCMIntentService {
     @Override
     protected void onPushMessage(Intent intent) {
-        //TODO: do something with the intent, the extras are the push payload
+        //The extras contain the payload you send from the server script:
+        String newApartmentAddress = intent.getStringExtra("address");
+        ...
     }
-    
 }
 ```
 
@@ -135,7 +137,15 @@ mobileService = new MobileService(this);
 mobileService.registerPush();
 ```
 
-If you want to use a transient push callback (a callback that is only valid for the duration of your application's runtime), use the registerPushWithTransientCallback method instead.
+If you want to use a transient push callback (a callback that is only valid for the duration of your application's runtime), use the *registerPushWithTransientCallback* method instead:
+
+```java
+mobileService.registerPushWithTransientCallback(new MobileServicePushCallback() {
+    public void onPushMessageReceived(Intent intent) {
+        //Use the intent extras to figure out the payload
+    }
+});
+```
 
 Server side setup for GCM
 =========================
@@ -147,7 +157,7 @@ The client-side code assumes that a "pushChannel" table exists, so you must firs
 Script to filter for duplicate channels
 ---------------------------------------
 
-Use this as the insert script for the "pushChannel" table.
+Use this as the insert script for the "pushChannel" table:
 
 ```javascript
 function insert(item, user, request) {
