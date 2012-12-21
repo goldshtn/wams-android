@@ -63,6 +63,7 @@ public class MobileService {
 	 */
 	public void unregisterPush() {
 		GCMRegistrar.unregister(context);
+		TransientPushCallbacks.removeAll();
 	}
 	
 	/**
@@ -84,7 +85,8 @@ public class MobileService {
 	 * will not be invoked if your application is no longer running.
 	 */
 	public void registerPush() {
-		//TODO: verify that the "pushChannels" table exists
+		//TODO: verify that the "pushChannels" table exists -- either check for exception accessing it,
+		//		or use the management API, which can be accessed the same as the azure xPlat CLI tool
 		
 		GCMRegistrar.checkDevice(context);
         GCMRegistrar.checkManifest(context); //TODO: this step is not required in production

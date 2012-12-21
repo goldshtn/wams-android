@@ -21,8 +21,6 @@ class TransientPushCallbacks {
 		}
 	}
 	
-	//TODO: remove API as well, perhaps based on token
-	
 	public static void invokePushCallbacks(Intent intent) {
 		MobileServicePushCallback[] copy;
 		synchronized(pushCallbacks) {
