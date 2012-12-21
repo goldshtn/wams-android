@@ -2,10 +2,17 @@ package net.sashag.wams.android;
 
 import java.util.List;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -82,9 +89,6 @@ public class WAMSGCMIntentService extends GCMBaseIntentService {
 		handler.post(runnable);
 	}
 	
-	//TODO: Add built-in support for some types of notifications, such as toast and standard notification.
-	//		Based on the extras, we could issue a Notification object, which would launch an activity when
-	//		the user clicks it.
 	private boolean processBuiltInNotification(final Context context, Intent intent) {
 		if (intent.hasExtra("builtInType")) {
 			String builtInType = intent.getStringExtra("builtInType");
@@ -96,7 +100,38 @@ public class WAMSGCMIntentService extends GCMBaseIntentService {
 					}
 				});
 			} else if (builtInType.equals("notification")) {
-				//TODO: Pop up a notification
+				int appIconId = context.getApplicationInfo().icon;
+				String contentTitle = intent.getStringExtra("contentTitle");
+				String contentText = intent.getStringExtra("contextText");
+				String tickerText = intent.getStringExtra("tickerText");
+				NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+				builder.setSmallIcon(appIconId);
+				builder.setContentTitle(contentTitle);
+				builder.setContentText(contentText);
+				builder.setTicker(tickerText);
+				if (intent.hasExtra("number")) {
+					String number = intent.getStringExtra("number");
+					builder.setNumber(Integer.parseInt(number));
+				}
+				Intent launchIntent;
+				if (intent.hasExtra("action")) {
+					String action = intent.getStringExtra("action");
+					launchIntent = new Intent(action);
+					if (intent.hasExtra("payload")) {
+						String payload = intent.getStringExtra("payload");
+						launchIntent.putExtra("payload", payload);
+					}
+				} else {
+					//Default to the application's main activity
+					launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+				}
+				//TODO: Take care of TaskStackBuilder stuff ...
+				PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+				builder.setContentIntent(pendingIntent);
+				
+				Notification notification = builder.build();
+				NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+				notificationManager.notify(1, notification);
 			} else {
 				Log.i("GCMIntentService", "Unrecognized built-in notification type: " + builtInType);
 				return false;
