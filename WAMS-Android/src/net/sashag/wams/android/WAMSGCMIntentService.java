@@ -4,7 +4,10 @@ import java.util.List;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gcm.GCMBaseIntentService;
 
@@ -62,20 +65,52 @@ public class WAMSGCMIntentService extends GCMBaseIntentService {
 	}
 
 	@Override
-	protected final void onMessage(Context context, Intent intent) {
+	protected final void onMessage(Context context, final Intent intent) {
 		Log.v("GCMIntentService", "Received push message: " + intent.toString());
-		TransientPushCallbacks.invokePushCallbacks(intent);
-		onPushMessage(intent);
+		if (!processBuiltInNotification(context, intent)) {
+			runOnMainThread(context, new Runnable() {
+				public void run() {
+					TransientPushCallbacks.invokePushCallbacks(intent);
+					onPushMessage(intent);
+				}
+			});
+		}
+	}
+	
+	private static void runOnMainThread(Context context, Runnable runnable) {
+		Handler handler = new Handler(context.getMainLooper());
+		handler.post(runnable);
 	}
 	
 	//TODO: Add built-in support for some types of notifications, such as toast and standard notification.
 	//		Based on the extras, we could issue a Notification object, which would launch an activity when
 	//		the user clicks it.
+	private boolean processBuiltInNotification(final Context context, Intent intent) {
+		if (intent.hasExtra("builtInType")) {
+			String builtInType = intent.getStringExtra("builtInType");
+			if (builtInType.equals("toast")) {
+				final String text = intent.getStringExtra("text");
+				runOnMainThread(context, new Runnable() {
+					public void run() {
+						Toast.makeText(context, text, Toast.LENGTH_LONG).show();
+					}
+				});
+			} else if (builtInType.equals("notification")) {
+				//TODO: Pop up a notification
+			} else {
+				Log.i("GCMIntentService", "Unrecognized built-in notification type: " + builtInType);
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
 	
 	/**
 	 * This method is invoked when a new push message arrives, regardless of whether the
 	 * application is running or not. Override this method to specify how to handle new
-	 * push messages. You cannot override other methods of this class.
+	 * push messages. You cannot override other methods of this class. This method is invoked
+	 * on your application's main thread, so you can manipulate UI from it.
 	 * 
 	 * @param intent	the intent that represents the push notification; any push parameters
 	 * 					passed are available as extras on the intent

@@ -1,10 +1,9 @@
 package net.sashag.wams.android;
 
-import com.google.android.gcm.GCMRegistrar;
-
-import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+
+import com.google.android.gcm.GCMRegistrar;
 
 /**
  * The entry point to Windows Azure Mobile Services. Represents a single
@@ -106,9 +105,8 @@ public class MobileService {
 	 * {@link registerPush} method for what you need to do to handle push notifications in general,
 	 * and to handle them in a non-transient way in particular.
 	 * 
-	 * @param pushCallback	the callback that is invoked on an unspecified thread when a
-	 * 						push notification arrives; you cannot modify you UI directly
-	 * 						from within this callback (use a {@link Handler} or {@link Activity.runOnUiThread})
+	 * @param pushCallback	the callback that is invoked on your application's UI thread when a
+	 * 						push notification arrives; you can modify your UI directly from it
 	 */
 	public void registerPushWithTransientCallback(MobileServicePushCallback pushCallback) {
 		registerPush();
