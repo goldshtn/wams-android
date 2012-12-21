@@ -567,7 +567,7 @@ public class MobileTable<E> {
 			return this;
 		}
 		
-		//TODO - support Boolean algebra (AND, OR ...)
+		//TODO: Support Boolean algebra (AND, OR ...)
 		
 		private String quoteValueIfNecessary(String key, String value) {
 			Class<?> fieldClass = Serializer.getFieldClassForKey(clazz, key);

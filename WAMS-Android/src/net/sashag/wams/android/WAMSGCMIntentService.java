@@ -68,8 +68,10 @@ public class WAMSGCMIntentService extends GCMBaseIntentService {
 		onPushMessage(intent);
 	}
 	
-	//This method can be overriden by derived classes to process push notifications even if the
-	//app was not running
+	//TODO: Add built-in support for some types of notifications, such as toast and standard notification.
+	//		Based on the extras, we could issue a Notification object, which would launch an activity when
+	//		the user clicks it.
+	
 	/**
 	 * This method is invoked when a new push message arrives, regardless of whether the
 	 * application is running or not. Override this method to specify how to handle new

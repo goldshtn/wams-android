@@ -73,7 +73,7 @@ class Serializer {
 			DataMember dataMemberAnnotation = field.getAnnotation(DataMember.class);
 			if (dataMemberAnnotation != null) {
 				field.setAccessible(true);
-				//TODO - coercion to types JSON doesn't support
+				//TODO: Coercion to types JSON doesn't support
 				Object fieldValue = field.get(obj);
 				jsonObject.put(dataMemberAnnotation.value(), fieldValue);
 			}
@@ -108,8 +108,8 @@ class Serializer {
 			DataMember dataMemberAnnotation = field.getAnnotation(DataMember.class);
 			if (dataMemberAnnotation != null) {
 				field.setAccessible(true);
-				//TODO - what if the value does not exist?
-				//TODO - support arrays?
+				//TODO: What if the value does not exist?
+				//TODO: Support arrays?
 				if (fieldType.equals(int.class) || fieldType.equals(Integer.class)) {
 					field.set(obj, jsonObject.getInt(dataMemberAnnotation.value()));
 				}
