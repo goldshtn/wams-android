@@ -29,6 +29,17 @@ import com.google.android.gcm.GCMBaseIntentService;
  */
 public class WAMSGCMIntentService extends GCMBaseIntentService {
 
+	private static final String NOTIFICATION_PAYLOAD = "payload";
+	private static final String NOTIFICATION_LAUNCH_ACTION = "action";
+	private static final String NOTIFICATION_NUMBER = "number";
+	private static final String NOTIFICATION_TICKER_TEXT = "tickerText";
+	private static final String NOTIFICATION_CONTENT_TEXT = "contentText";
+	private static final String NOTIFICATION_CONTENT_TITLE = "contentTitle";
+	private static final String BUILT_IN_TYPE_NOTIFICATION = "notification";
+	private static final String TOAST_TEXT = "text";
+	private static final String BUILT_IN_TYPE_TOAST = "toast";
+	private static final String BUILT_IN_TYPE = "__builtInType";
+
 	@Override
 	protected final String[] getSenderIds(Context context) {
 		String senderId = ResourceUtils.getSenderId(context);
@@ -90,42 +101,43 @@ public class WAMSGCMIntentService extends GCMBaseIntentService {
 	}
 	
 	private boolean processBuiltInNotification(final Context context, Intent intent) {
-		if (intent.hasExtra("builtInType")) {
-			String builtInType = intent.getStringExtra("builtInType");
-			if (builtInType.equals("toast")) {
-				final String text = intent.getStringExtra("text");
+		if (intent.hasExtra(BUILT_IN_TYPE)) {
+			String builtInType = intent.getStringExtra(BUILT_IN_TYPE);
+			Log.v("GCMIntentService", "Got built-in push notification of type: " + builtInType);
+			if (builtInType.equals(BUILT_IN_TYPE_TOAST)) {
+				final String text = intent.getStringExtra(TOAST_TEXT);
 				runOnMainThread(context, new Runnable() {
 					public void run() {
 						Toast.makeText(context, text, Toast.LENGTH_LONG).show();
 					}
 				});
-			} else if (builtInType.equals("notification")) {
+			} else if (builtInType.equals(BUILT_IN_TYPE_NOTIFICATION)) {
 				int appIconId = context.getApplicationInfo().icon;
-				String contentTitle = intent.getStringExtra("contentTitle");
-				String contentText = intent.getStringExtra("contextText");
-				String tickerText = intent.getStringExtra("tickerText");
+				String contentTitle = intent.getStringExtra(NOTIFICATION_CONTENT_TITLE);
+				String contentText = intent.getStringExtra(NOTIFICATION_CONTENT_TEXT);
+				String tickerText = intent.getStringExtra(NOTIFICATION_TICKER_TEXT);
 				NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
 				builder.setSmallIcon(appIconId);
 				builder.setContentTitle(contentTitle);
 				builder.setContentText(contentText);
 				builder.setTicker(tickerText);
-				if (intent.hasExtra("number")) {
-					String number = intent.getStringExtra("number");
+				builder.setAutoCancel(true);
+				if (intent.hasExtra(NOTIFICATION_NUMBER)) {
+					String number = intent.getStringExtra(NOTIFICATION_NUMBER);
 					builder.setNumber(Integer.parseInt(number));
 				}
 				Intent launchIntent;
-				if (intent.hasExtra("action")) {
-					String action = intent.getStringExtra("action");
+				if (intent.hasExtra(NOTIFICATION_LAUNCH_ACTION)) {
+					String action = intent.getStringExtra(NOTIFICATION_LAUNCH_ACTION);
 					launchIntent = new Intent(action);
-					if (intent.hasExtra("payload")) {
-						String payload = intent.getStringExtra("payload");
-						launchIntent.putExtra("payload", payload);
+					if (intent.hasExtra(NOTIFICATION_PAYLOAD)) {
+						String payload = intent.getStringExtra(NOTIFICATION_PAYLOAD);
+						launchIntent.putExtra(NOTIFICATION_PAYLOAD, payload);
 					}
 				} else {
 					//Default to the application's main activity
 					launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
 				}
-				//TODO: Take care of TaskStackBuilder stuff ...
 				PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 				builder.setContentIntent(pendingIntent);
 				
