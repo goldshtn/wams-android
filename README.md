@@ -8,6 +8,7 @@ This SDK covers the following features of Windows Azure Mobile Services:
 * Simple query operators (gt, lt, equals)
 * Simple paging operators (top, skip)
 * Push support with GCM and some scripts on the server
+* Displaying toasts and notifications when processing a push
 
 To use the SDK, download the source and add the provided project as a library project to your Eclipse workspace. Next, add a library reference from your app to this project. Note that the project requires an minimum API level of 2.2.
 
@@ -217,3 +218,42 @@ function sendGcmPush(payload) {
 }
 ```
 To learn more about how to handle dead channels and how to interpret the GCM response in general, consult the [GCM Architecture Overview](http://developer.android.com/google/gcm/gcm.html#response).
+
+Sending toasts and notifications
+--------------------------------
+
+The client-side library can automatically process some types of push messages and display a toast or a notification (in the Android notification area) when receiving a push message. If you send a built-in notification, the push intent *will not* be passed to your onPushMessage method. Instead, the client-side library will display a toast or a notification, as appropriate.
+
+To send a toast notification, set the payload message to the following JSON string:
+
+```javascript
+{
+    "__builtInType": "toast",
+    "text": "A new apartment was added in your vicinity."
+}
+```
+
+To send a notification that appears in the Android notification area, set the payload message to the following JSON string:
+
+```javascript
+{
+    "__builtInType": "notification",
+    "contentTitle": "New apartment added",
+    "contentText": "3 bedrooms on One Microsoft Way, Redmond WA",
+    "tickerText": "A new apartment was added on One Microsoft Way",
+    "number": "1",
+    "action": "SOME_INTENT_ACTION",
+    "payload": "SOME_STRING"
+}
+```
+
+The *number*, *action*, and *payload* properties are optional. If you do not set the *action* property, clicking the notification will open your application's main activity. If you set the *action* property, clicking the notification will open the activity that is registered to handle the specified intent action. If you set the *payload* property, it will be passed as-is in a string extra named "payload" to the activity that opens when the user clicks the notification.
+
+Script to test your push support with curl
+------------------------------------------
+
+When testing your client-side push support, you might find the following curl command line useful:
+
+```
+curl -X POST -H 'Authorization: key=YOUR_KEY_HERE' -H 'Content-Type: application/json' https://android.googleapis.com/gcm/send --data '{ "registration_ids": ["REG_ID_HERE"], "data": { "__builtInType": "notification", "contentTitle": "This is the title", "contentText": "This is the content text", "tickerText": "This is the ticker text", "number": "42" } }'
+```
