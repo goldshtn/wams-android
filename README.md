@@ -224,7 +224,7 @@ Sending toasts and notifications
 
 The client-side library can automatically process some types of push messages and display a toast or a notification (in the Android notification area) when receiving a push message. If you send a built-in notification, the push intent *will not* be passed to your onPushMessage method. Instead, the client-side library will display a toast or a notification, as appropriate.
 
-To send a toast notification, set the payload message to the following JSON string:
+To send a toast notification, set the payload field to the following JSON:
 
 ```javascript
 {
@@ -233,7 +233,7 @@ To send a toast notification, set the payload message to the following JSON stri
 }
 ```
 
-To send a notification that appears in the Android notification area, set the payload message to the following JSON string:
+To send a notification that appears in the Android notification area, set the payload field to the following JSON:
 
 ```javascript
 {
