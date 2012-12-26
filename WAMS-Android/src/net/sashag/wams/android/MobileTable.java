@@ -38,17 +38,17 @@ import android.util.Log;
 public class MobileTable<E> {
 
 	private final Context context;
+	private HttpRequestDecorator requestDecorator;
 	private final String serviceUrl;
-	private final String apiKey;
 	private final String tableName;
 	private final Class<E> clazz;
 	private final Executor executor;
 	private final Handler uiHandler;
 	
-	MobileTable(Context context, String serviceUrl, String apiKey, Class<E> clazz) {
+	MobileTable(Context context, HttpRequestDecorator requestDecorator, String serviceUrl, Class<E> clazz) {
 		this.context = context;
+		this.requestDecorator = requestDecorator;
 		this.serviceUrl = serviceUrl;
-		this.apiKey = apiKey;
 		this.clazz = clazz;
 		DataTable dataTableAnnotation = clazz.getAnnotation(DataTable.class);
 		if (dataTableAnnotation == null) {
@@ -222,7 +222,7 @@ public class MobileTable<E> {
 				urlConnection.setRequestMethod("POST");
 				urlConnection.addRequestProperty("Content-Type", "application/json");
 				urlConnection.addRequestProperty("ACCEPT", "application/json");
-				urlConnection.addRequestProperty("X-ZUMO-APPLICATION", apiKey);
+				requestDecorator.decorateHttpRequest(urlConnection);
 				
 				DataOutputStream bodyOutput = new DataOutputStream(urlConnection.getOutputStream());
 				bodyOutput.writeBytes(body);
@@ -319,7 +319,7 @@ public class MobileTable<E> {
 			HttpPatch httpPatch = new HttpPatch(updateUrl);
 			httpPatch.addHeader("Content-Type", "application/json");
 			httpPatch.addHeader("ACCEPT", "application/json");
-			httpPatch.addHeader("X-ZUMO-APPLICATION", apiKey);
+			requestDecorator.decorateHttpRequest(httpPatch);
 			
 			StringEntity postBody = new StringEntity(body);
 			postBody.setContentType("application/json");
@@ -395,7 +395,8 @@ public class MobileTable<E> {
 				URL url = new URL(deleteUrl);
 				urlConnection = (HttpURLConnection) url.openConnection();
 				urlConnection.setRequestMethod("DELETE");
-				urlConnection.addRequestProperty("X-ZUMO-APPLICATION", apiKey);
+				requestDecorator.decorateHttpRequest(urlConnection);
+				
 				statusCode = urlConnection.getResponseCode();
 				Log.i("MobileTable", "HTTP DELETE request returned status code: " + statusCode);
 			} finally {
@@ -698,7 +699,8 @@ public class MobileTable<E> {
 				urlConnection.setRequestMethod("GET");
 				urlConnection.addRequestProperty("Content-Type", "application/json");
 				urlConnection.addRequestProperty("ACCEPT", "application/json");
-				urlConnection.addRequestProperty("X-ZUMO-APPLICATION", MobileTable.this.apiKey);
+				requestDecorator.decorateHttpRequest(urlConnection);
+				
 				try {
 					InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 					BufferedReader reader = new BufferedReader(new InputStreamReader(in));

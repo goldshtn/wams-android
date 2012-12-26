@@ -1,6 +1,7 @@
 package net.sashag.wams.android;
 
 import android.content.Context;
+import android.os.Handler;
 import android.util.Log;
 
 import com.google.android.gcm.GCMRegistrar;
@@ -15,8 +16,9 @@ import com.google.android.gcm.GCMRegistrar;
 public class MobileService {
 
 	private String serviceUrl;
-	private String apiKey;
 	private Context context;
+	private MobileUser currentUser;
+	private final HttpRequestDecorator requestDecorator = new HttpRequestDecorator();
 	
 	/**
 	 * Initializes a new mobile service entry point with a service URL and API key
@@ -27,9 +29,7 @@ public class MobileService {
 	 * @param ctx		your application's context (or activity)
 	 */
 	public MobileService(Context ctx) {
-		context = ctx;
-		serviceUrl = ResourceUtils.getUrl(context);
-		apiKey = ResourceUtils.getApiKey(context);
+		this(ctx, ResourceUtils.getUrl(ctx), ResourceUtils.getApiKey(ctx));
 	}
 	
 	/**
@@ -44,7 +44,7 @@ public class MobileService {
 	public MobileService(Context context, String serviceUrl, String apiKey) {
 		this.context = context;
 		this.serviceUrl = serviceUrl;
-		this.apiKey = apiKey;
+		requestDecorator.setApplicationKey(apiKey);
 	}
 	
 	/**
@@ -54,7 +54,7 @@ public class MobileService {
 	 * @return			an instance of {@link MobileTable MobileTable} for accessing data
 	 */
 	public <E> MobileTable<E> getTable(Class<E> clazz) {
-		return new MobileTable<E>(serviceUrl, apiKey, clazz);
+		return new MobileTable<E>(context, requestDecorator, serviceUrl, clazz);
 	}
 	
 	/**
@@ -112,5 +112,36 @@ public class MobileService {
 		registerPush();
 		TransientPushCallbacks.registerTransientPushCallback(pushCallback);
 	}
+
+	public void login(MobileServiceAuthenticationProvider provider, final MobileServiceLoginCallback callback) {
+		final AuthenticationWebViewDialog authDialog = new AuthenticationWebViewDialog(context);
+		authDialog.start(serviceUrl, provider, new Runnable() {
+			public void run() {
+				if (authDialog.hasError()) {
+					callback.errorOccurred(new MobileException("Error while authenticating: " + authDialog.getError()));
+				} else {
+					currentUser = authDialog.getUser();
+					requestDecorator.setAuthenticationToken(currentUser.getAuthenticationToken());
+					callback.completedSuccessfully(currentUser);
+					//TODO: persist the authentication token in a preference/file
+				}
+			}
+		});
+	}
+	
+	public void logout() {
+		requestDecorator.clearAuthenticationToken();
+		currentUser = null;
+	}
+	
+	public MobileUser getCurrentUser() {
+		return currentUser;
+	}
+	
+	public boolean isLoggedIn() {
+		return currentUser != null;
+	}
+	
+	//TODO: ctor that takes an authentication token or alt. login method
 	
 }
