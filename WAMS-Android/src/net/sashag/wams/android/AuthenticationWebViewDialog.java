@@ -11,6 +11,7 @@ import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ProgressBar;
 
 class AuthenticationWebViewDialog {
 	
@@ -21,6 +22,7 @@ class AuthenticationWebViewDialog {
 	private AlertDialog dialog;
 	private String error;
 	private MobileUser user;
+	private boolean cancelled;
 
 	@SuppressLint("SetJavaScriptEnabled")
 	AuthenticationWebViewDialog(Context context) {
@@ -29,10 +31,16 @@ class AuthenticationWebViewDialog {
 		settings.setSavePassword(false);
 		settings.setJavaScriptEnabled(true);
 		settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+		
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
-		builder.setTitle("Login");
+		builder.setTitle("Please wait...");
 		builder.setView(webView);
+		
 		dialog = builder.create();
+	}
+	
+	boolean wasCancelled() {
+		return cancelled;
 	}
 	
 	boolean hasError() {
@@ -54,10 +62,15 @@ class AuthenticationWebViewDialog {
 		
 		dialog.setOnCancelListener(new OnCancelListener() {
 			public void onCancel(DialogInterface d) {
-				//TODO: call the callback with a cancelled notification
+				cancelled = true;
 			}
 		});
 		webView.setWebViewClient(new WebViewClient() {
+			@Override
+			public void onPageFinished(WebView view, String url) {
+				dialog.setTitle("Login");
+			}
+			
 			@Override
 			public boolean shouldOverrideUrlLoading(WebView view, String url) {
 				Log.v("AuthenticationWebViewDialog", "Navigating to URL: " + url);

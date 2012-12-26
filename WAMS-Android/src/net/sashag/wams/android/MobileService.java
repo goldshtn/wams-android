@@ -1,7 +1,8 @@
 package net.sashag.wams.android;
 
 import android.content.Context;
-import android.os.Handler;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.util.Log;
 
 import com.google.android.gcm.GCMRegistrar;
@@ -15,6 +16,10 @@ import com.google.android.gcm.GCMRegistrar;
  */
 public class MobileService {
 
+	private static final String WAMS_PREFS_NAME = "WAMSPreferences";
+	private static final String AUTH_TOKEN_PREF_NAME = "auth_token";
+	private static final String USER_ID_PREF_NAME = "user_id";
+	
 	private String serviceUrl;
 	private Context context;
 	private MobileUser currentUser;
@@ -45,6 +50,10 @@ public class MobileService {
 		this.context = context;
 		this.serviceUrl = serviceUrl;
 		requestDecorator.setApplicationKey(apiKey);
+		readLoginInfo();
+		if (currentUser != null) {
+			requestDecorator.setAuthenticationToken(currentUser.getAuthenticationToken());
+		}
 	}
 	
 	/**
@@ -84,11 +93,8 @@ public class MobileService {
 	 * will not be invoked if your application is no longer running.
 	 */
 	public void registerPush() {
-		//TODO: verify that the "pushChannels" table exists -- either check for exception accessing it,
-		//		or use the management API, which can be accessed the same as the azure xPlat CLI tool
-		
 		GCMRegistrar.checkDevice(context);
-        GCMRegistrar.checkManifest(context); //TODO: this step is not required in production
+        GCMRegistrar.checkManifest(context); //This step is not required in production, but doesn't hurt
         String registrationId = GCMRegistrar.getRegistrationId(context);
         if (registrationId.equals("")) {
         	String senderId = ResourceUtils.getSenderId(context);
@@ -113,31 +119,88 @@ public class MobileService {
 		TransientPushCallbacks.registerTransientPushCallback(pushCallback);
 	}
 
+	/**
+	 * Displays an authentication dialog for the specified mobile service authentication provider,
+	 * and calls the specified callback when the authentication flow completes successfully. To use
+	 * an authentication provider for authentication, you must first configure your mobile service
+	 * to support authentication with that provider. Typical configuration involves providing an
+	 * API key in the Windows Azure Management Portal.
+	 * 
+	 * @param provider	the authentication provider
+	 * @param callback	the callback invoked when the login flow completes successfully, or 
+	 * 					encounters an error
+	 */
 	public void login(MobileServiceAuthenticationProvider provider, final MobileServiceLoginCallback callback) {
 		final AuthenticationWebViewDialog authDialog = new AuthenticationWebViewDialog(context);
 		authDialog.start(serviceUrl, provider, new Runnable() {
 			public void run() {
 				if (authDialog.hasError()) {
 					callback.errorOccurred(new MobileException("Error while authenticating: " + authDialog.getError()));
+				} else if (authDialog.wasCancelled()) {
+					callback.cancelled();
 				} else {
 					currentUser = authDialog.getUser();
 					requestDecorator.setAuthenticationToken(currentUser.getAuthenticationToken());
+					persistLoginInfo();
 					callback.completedSuccessfully(currentUser);
-					//TODO: persist the authentication token in a preference/file
 				}
 			}
 		});
 	}
 	
-	public void logout() {
-		requestDecorator.clearAuthenticationToken();
-		currentUser = null;
+	private void persistLoginInfo() {
+		SharedPreferences prefs = context.getSharedPreferences(WAMS_PREFS_NAME, Context.MODE_PRIVATE);
+		Editor editor = prefs.edit();
+		editor.putString(AUTH_TOKEN_PREF_NAME, currentUser.getAuthenticationToken());
+		editor.putString(USER_ID_PREF_NAME, currentUser.getUserId());
+		editor.commit();	
 	}
 	
+	private void clearLoginInfo() {
+		SharedPreferences prefs = context.getSharedPreferences(WAMS_PREFS_NAME, Context.MODE_PRIVATE);
+		Editor editor = prefs.edit();
+		editor.remove(AUTH_TOKEN_PREF_NAME);
+		editor.remove(USER_ID_PREF_NAME);
+		editor.commit();
+	}
+	
+	private void readLoginInfo() {
+		SharedPreferences prefs = context.getSharedPreferences(WAMS_PREFS_NAME, Context.MODE_PRIVATE);
+		String authToken = prefs.getString(AUTH_TOKEN_PREF_NAME, null);
+		String userId = prefs.getString(USER_ID_PREF_NAME, null);
+		if (authToken != null && userId != null) {
+			currentUser = new MobileUser(authToken, userId);
+		}
+	}
+	
+	/**
+	 * Logs out the current user. This only clears the authentication cache for your application,
+	 * and does not modify any information on the server. If you call the {@link login} method
+	 * again, the user may see a very brief authentication window, because the authentication
+	 * provider might still remember his credentials.
+	 */
+	public void logout() {
+		if (currentUser != null) {
+			requestDecorator.clearAuthenticationToken();
+			currentUser = null;
+			clearLoginInfo();
+		}
+	}
+	
+	/**
+	 * Retrieves the currently logged-in user, or <b>null</b> if no user is currently logged in.
+	 * 
+	 * @return	the currently logged-in user
+	 */
 	public MobileUser getCurrentUser() {
 		return currentUser;
 	}
 	
+	/**
+	 * Determines whether a user is currently logged-in.
+	 * 
+	 * @return	whether a user is currently logged-in
+	 */
 	public boolean isLoggedIn() {
 		return currentUser != null;
 	}
