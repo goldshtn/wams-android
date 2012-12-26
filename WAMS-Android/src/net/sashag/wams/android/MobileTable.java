@@ -23,6 +23,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
 
@@ -36,13 +37,16 @@ import android.util.Log;
  */
 public class MobileTable<E> {
 
+	private final Context context;
 	private final String serviceUrl;
 	private final String apiKey;
 	private final String tableName;
 	private final Class<E> clazz;
 	private final Executor executor;
+	private final Handler uiHandler;
 	
-	MobileTable(String serviceUrl, String apiKey, Class<E> clazz) {
+	MobileTable(Context context, String serviceUrl, String apiKey, Class<E> clazz) {
+		this.context = context;
 		this.serviceUrl = serviceUrl;
 		this.apiKey = apiKey;
 		this.clazz = clazz;
@@ -52,15 +56,15 @@ public class MobileTable<E> {
 		}
 		this.tableName = dataTableAnnotation.value();
 		this.executor = Executors.newCachedThreadPool();
+		this.uiHandler = new Handler(this.context.getMainLooper());
 	}
-	
+
 	/**
 	 * Retrieves all elements in the mobile table and posts the specified callback to
 	 * the provided {@link Handler} when the results are available or an exception occurs.
 	 * 
 	 * @param callback	called when the results are available or an exception occurs
-	 * @param handler	callbacks are posted to this handler instead of the default thread
-	 * 					that executed the operation
+	 * @param handler	callbacks are posted to this handler
 	 */
 	public void allAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
 		new QueryBuilder().selectAsync(callback, handler);
@@ -70,10 +74,10 @@ public class MobileTable<E> {
 	 * Retrieves all elements in the mobile table and calls the specified callback when
 	 * the results are available or an exception occurs.
 	 * 
-	 * @param callback	called when the results are available or an exception occurs
+	 * @param callback	called on the UI thread when the results are available or an exception occurs
 	 */
 	public void allAsync(MobileServiceCallbackWithResults<E> callback) {
-		new QueryBuilder().selectAsync(callback);
+		allAsync(callback, uiHandler);
 	}
 	
 	/**
@@ -164,11 +168,10 @@ public class MobileTable<E> {
 	 * @param item		the item to insert
 	 * @param callback	the callback invoked when the operation completes, specifying an
 	 * 					error if one occurred
-	 * @param handler	callbacks are posted to this handler instead of the thread that
-	 * 					performed the operation
+	 * @param handler	callbacks are posted to this handler
 	 */
 	public void insertAsync(E item, MobileServiceCallback callback, Handler handler) {
-		insertAsync(item, new HandlerDecorator(handler, callback));
+		insertAsyncCore(item, new HandlerDecorator(handler, callback));
 	}
 	
 	/**
@@ -177,10 +180,14 @@ public class MobileTable<E> {
 	 * field decorated by the {@link Key} annotation) returned from the mobile service.
 	 * 
 	 * @param item		the item to insert
-	 * @param callback	the callback invoked when the operation completes, specifying an
-	 * 					error if one occurred
+	 * @param callback	the callback invoked on the UI thread when the operation completes,
+	 * 					specifying an error if one occurred
 	 */
-	public void insertAsync(final E item, final MobileServiceCallback callback) {
+	public void insertAsync(E item, MobileServiceCallback callback) {
+		insertAsync(item, callback, uiHandler);
+	}
+	
+	private void insertAsyncCore(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
@@ -260,11 +267,10 @@ public class MobileTable<E> {
 	 * @param item		the item to update
 	 * @param callback	the callback invoked when the operation completes, specifying an
 	 * 					error if one occurred
-	 * @param handler	the callback is posted to this handler instead of the thread that performed
-	 * 					the operation
+	 * @param handler	the callback is posted to this handler
 	 */
 	public void updateAsync(E item, MobileServiceCallback callback, Handler handler) {
-		updateAsync(item, new HandlerDecorator(handler, callback));
+		updateAsyncCore(item, new HandlerDecorator(handler, callback));
 	}
 	
 	/**
@@ -274,10 +280,14 @@ public class MobileTable<E> {
 	 * with exception details if an error occurred.
 	 * 
 	 * @param item		the item to update
-	 * @param callback	the callback invoked when the operation completes, specifying an
-	 * 					error if one occurred
+	 * @param callback	the callback invoked on the UI thread when the operation completes,
+	 * 					specifying an error if one occurred
 	 */
-	public void updateAsync(final E item, final MobileServiceCallback callback) {
+	public void updateAsync(E item, MobileServiceCallback callback) {
+		updateAsync(item, callback, uiHandler);
+	}
+	
+	private void updateAsyncCore(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
@@ -336,11 +346,10 @@ public class MobileTable<E> {
 	 * @param item		the item to delete
 	 * @param callback	the callback invoked when the operation completes, specifying an
 	 * 					error if one occurred
-	 * @param handler	the callback is posted to this handler instead of the thread that performed
-	 * 					the operation
+	 * @param handler	the callback is posted to this handler
 	 */
 	public void deleteAsync(E item, MobileServiceCallback callback, Handler handler) {
-		deleteAsync(item, new HandlerDecorator(handler, callback));
+		deleteAsyncCore(item, new HandlerDecorator(handler, callback));
 	}
 	
 	/**
@@ -349,10 +358,14 @@ public class MobileTable<E> {
 	 * completes, the provided callback is invoked with exception information, if an error occurred.
 	 * 
 	 * @param item		the item to delete
-	 * @param callback	the callback invoked when the operation completes, specifying an
-	 * 					error if one occurred
+	 * @param callback	the callback invoked on the UI thread when the operation completes, specifying
+	 * 					an error if one occurred
 	 */
-	public void deleteAsync(final E item, final MobileServiceCallback callback) {
+	public void deleteAsync(E item, MobileServiceCallback callback) {
+		deleteAsync(item, callback, uiHandler);
+	}
+	
+	private void deleteAsyncCore(final E item, final MobileServiceCallback callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
@@ -641,11 +654,10 @@ public class MobileTable<E> {
 		 * 
 		 * @param callback	the callback invoked when the operation completes, providing the 
 		 * 					list of items or an exception if one occurred
-		 * @param handler	the callback is posted to this handler instead of the thread that
-		 * 					performed the operation
+		 * @param handler	the callback is posted to this handler
 		 */
 		public void selectAsync(MobileServiceCallbackWithResults<E> callback, Handler handler) {
-			selectAsync(new HandlerDecoratorWithResults<E>(handler, callback));
+			selectAsyncCore(new HandlerDecoratorWithResults<E>(handler, callback));
 		}
 
 		/**
@@ -655,7 +667,11 @@ public class MobileTable<E> {
 		 * @param callback	the callback invoked when the operation completes, providing the 
 		 * 					list of items or an exception if one occurred
 		 */
-		public void selectAsync(final MobileServiceCallbackWithResults<E> callback) {
+		public void selectAsync(MobileServiceCallbackWithResults<E> callback) {
+			selectAsync(callback, uiHandler);
+		}
+		
+		private void selectAsyncCore(final MobileServiceCallbackWithResults<E> callback) {
 			executor.execute(new Runnable() {
 				public void run() {
 					try {
