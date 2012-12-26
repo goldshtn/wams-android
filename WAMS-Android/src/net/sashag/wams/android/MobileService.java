@@ -16,7 +16,7 @@ import com.google.android.gcm.GCMRegistrar;
  */
 public class MobileService {
 
-	private static final String WAMS_PREFS_NAME = "WAMSPreferences";
+	private static final String WAMS_PREFS_NAME = "net.sashag.wams.android.prefs";
 	private static final String AUTH_TOKEN_PREF_NAME = "auth_token";
 	private static final String USER_ID_PREF_NAME = "user_id";
 	

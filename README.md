@@ -7,6 +7,8 @@ This SDK covers the following features of Windows Azure Mobile Services:
 * Basic CRUD operations on data tables (select, insert, update, delete)
 * Simple query operators (gt, lt, equals)
 * Simple paging operators (top, skip)
+* Authentication support with WAMS providers: Microsoft Account, Facebook, Twitter, Google
+* Authentication token persistence across application runs
 * Push support with GCM and some scripts on the server
 * Displaying toasts and notifications when processing a push
 
@@ -257,3 +259,32 @@ When testing your client-side push support, you might find the following curl co
 ```
 curl -X POST -H 'Authorization: key=YOUR_KEY_HERE' -H 'Content-Type: application/json' https://android.googleapis.com/gcm/send --data '{ "registration_ids": ["REG_ID_HERE"], "data": { "__builtInType": "notification", "contentTitle": "This is the title", "contentText": "This is the content text", "tickerText": "This is the ticker text", "number": "42" } }'
 ```
+
+Authentication
+==============
+
+You can use the client-side library to authenticate users through Windows Azure Mobile Services. First, make sure you configured the authentication providers you intend to work with (see the [Developer Guide](https://www.windowsazure.com/en-us/develop/mobile/resources/#header-2) for more information). For example, in the case of Twitter authentication, this requires that you create a Twitter application and provide the application ID and secret in the Windows Azure Management Portal. Alternatively, you can use the command-line 'azure' tool:
+
+```
+azure mobile config set twitterClientId YOUR_CLIENT_ID
+azure mobile config set twitterClientSecret YOUR_CLIENT_SECRET
+```
+
+Now, you can use the authentication provider as follows:
+
+```java
+mobileService.login(MobileServiceAuthenticationProvider.TWITTER, new MobileServiceLoginCallback() {
+    public void errorOccurred(MobileException exception) {
+        //Invoked if an error occurred in the authentication process
+    }
+    public void completedSuccessfully(MobileUser user) {
+        //Invoked if the login completed successfully -- user.getUserId() provides the user id
+        //which you can also access in server-side scripts
+    }
+    public void cancelled() {
+        //Invoked if the user cancelled the login process
+    }
+});
+```
+
+The client-side library persists the authentication token and user information in a file on the device, which means you don't have to invoke the *login* method more than once. To check whether the user is currently logged-in, use the *MobileService.isLoggedIn* method. To log out, use the *MobileService.logout* method (this also clears the information from the device so that subsequent runs will require a login).
