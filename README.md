@@ -266,8 +266,8 @@ Authentication
 You can use the client-side library to authenticate users through Windows Azure Mobile Services. First, make sure you configured the authentication providers you intend to work with (see the [Developer Guide](https://www.windowsazure.com/en-us/develop/mobile/resources/#header-2) for more information). For example, in the case of Twitter authentication, this requires that you create a Twitter application and provide the application ID and secret in the Windows Azure Management Portal. Alternatively, you can use the command-line 'azure' tool:
 
 ```
-azure mobile config set twitterClientId YOUR_CLIENT_ID
-azure mobile config set twitterClientSecret YOUR_CLIENT_SECRET
+azure mobile config set YOUR_SERVICE_NAME twitterClientId YOUR_CLIENT_ID
+azure mobile config set YOUR_SERVICE_NAME twitterClientSecret YOUR_CLIENT_SECRET
 ```
 
 Now, you can use the authentication provider as follows:
