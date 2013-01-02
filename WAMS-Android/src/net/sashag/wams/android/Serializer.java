@@ -7,6 +7,8 @@ import java.security.InvalidParameterException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.util.Log;
+
 class Serializer {
 
 	static int getIdFrom(Object obj) throws IllegalArgumentException, IllegalAccessException {
@@ -73,9 +75,16 @@ class Serializer {
 			DataMember dataMemberAnnotation = field.getAnnotation(DataMember.class);
 			if (dataMemberAnnotation != null) {
 				field.setAccessible(true);
-				//TODO: Coercion to types JSON doesn't support
 				Object fieldValue = field.get(obj);
-				jsonObject.put(dataMemberAnnotation.value(), fieldValue);
+				//Special hack for WAMS -- currently the C# and iOS SDKs convert Booleans to 0/1
+				//values, which are then stored in SQL Server as a numeric column and not BIT.
+				//We do the same here for cross-platform compatibility with these SDKs.
+				if (field.getType().equals(boolean.class) || field.getType().equals(Boolean.class)) {
+					int boolValue = fieldValue.equals(true) ? 1 : 0;
+					jsonObject.put(dataMemberAnnotation.value(), boolValue);
+				} else {
+					jsonObject.put(dataMemberAnnotation.value(), fieldValue);
+				}
 			}
 		}
 		if (withId && !foundKey) {
@@ -107,27 +116,41 @@ class Serializer {
 			}
 			DataMember dataMemberAnnotation = field.getAnnotation(DataMember.class);
 			if (dataMemberAnnotation != null) {
+				String propName = dataMemberAnnotation.value();
+				if (!jsonObject.has(propName)) {
+					throw new InvalidParameterException("The JSON object does not contain a value for field: " + propName);
+				}
 				field.setAccessible(true);
-				//TODO: What if the value does not exist?
-				//TODO: Support arrays?
 				if (fieldType.equals(int.class) || fieldType.equals(Integer.class)) {
-					field.set(obj, jsonObject.getInt(dataMemberAnnotation.value()));
+					field.set(obj, jsonObject.getInt(propName));
 				}
 				else if (fieldType.equals(double.class) || fieldType.equals(Double.class)) {
-					field.set(obj, jsonObject.getDouble(dataMemberAnnotation.value()));
+					field.set(obj, jsonObject.getDouble(propName));
 				}
 				else if (fieldType.equals(boolean.class) || fieldType.equals(Boolean.class)) {
-					field.set(obj, jsonObject.getBoolean(dataMemberAnnotation.value()));
+					//See comment in the toJson method -- we support 0/1 numeric values
+					//as the value of a Boolean property, because of cross-platform compat
+					//with the C# and iOS SDKs.
+					try {
+						int boolValue = jsonObject.getInt(propName);
+						if (boolValue != 0 && boolValue != 1) {
+							throw new InvalidParameterException("Invalid value " + boolValue + " specified for Boolean property: " + propName);
+						}
+						field.set(obj, boolValue == 1 ? true : false);
+					} catch (JSONException e) {
+						Log.v("Serializer", "JSON value for Boolean property '" + propName + "' received as Boolean and not a number (0/1). This may fail with the C# and iOS SDKs.");
+						field.set(obj, jsonObject.getBoolean(propName));
+					}
 				}
 				else if (fieldType.equals(String.class)) {
-					field.set(obj, jsonObject.getString(dataMemberAnnotation.value()));
+					field.set(obj, jsonObject.getString(propName));
 				}
 				else if (fieldType.equals(long.class) || fieldType.equals(Long.class)) {
-					field.set(obj, jsonObject.getLong(dataMemberAnnotation.value()));
+					field.set(obj, jsonObject.getLong(propName));
 				}
 				else {
 					//Taking a risk -- this may fail
-					field.set(obj, jsonObject.get(dataMemberAnnotation.value()));
+					field.set(obj, jsonObject.get(propName));
 				}
 			}
 		}
