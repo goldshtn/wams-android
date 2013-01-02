@@ -230,8 +230,8 @@ To send a toast notification, set the payload field to the following JSON:
 
 ```javascript
 {
-    "__builtInType": "toast",
-    "text": "A new apartment was added in your vicinity."
+    __builtInType: "toast",
+    text: "A new apartment was added in your vicinity."
 }
 ```
 
@@ -239,13 +239,13 @@ To send a notification that appears in the Android notification area, set the pa
 
 ```javascript
 {
-    "__builtInType": "notification",
-    "contentTitle": "New apartment added",
-    "contentText": "3 bedrooms on One Microsoft Way, Redmond WA",
-    "tickerText": "A new apartment was added on One Microsoft Way",
-    "number": "1",
-    "action": "SOME_INTENT_ACTION",
-    "payload": "SOME_STRING"
+    __builtInType: "notification",
+    contentTitle: "New apartment added",
+    contentText: "3 bedrooms on One Microsoft Way, Redmond WA",
+    tickerText: "A new apartment was added on One Microsoft Way",
+    number: "1",
+    action: "SOME_INTENT_ACTION",
+    payload: "SOME_STRING"
 }
 ```
 
