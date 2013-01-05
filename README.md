@@ -51,7 +51,7 @@ for (Apartment apartment : bigApts) {
 
 //Other operations feature async support as well:
 apartments.deleteAsync(newApartment, new MobileServiceCallback() {
-	public void completedSuccessfully() {}
+	public void completedSuccessfully(Apartment deletedItem) {}
 	public void errorOccurred(MobileException exception) {}
 });
 ```

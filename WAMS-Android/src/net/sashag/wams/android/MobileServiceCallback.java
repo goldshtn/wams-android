@@ -6,12 +6,14 @@ package net.sashag.wams.android;
  * @author Sasha Goldshtein
  *
  */
-public interface MobileServiceCallback {
+public interface MobileServiceCallback<E> {
 	
 	/**
 	 * Called when the operation completes successfully.
+	 * 
+	 * @param item the item affected by the operation
 	 */
-	void completedSuccessfully();
+	void completedSuccessfully(E item);
 	
 	/**
 	 * Called when the operation throws an exception.

@@ -133,19 +133,19 @@ public class MobileTable<E> {
 		
 	}
 	
-	private static class HandlerDecorator implements MobileServiceCallback {
+	private static class HandlerDecorator<E> implements MobileServiceCallback<E> {
 		private Handler handler;
-		private MobileServiceCallback callback;
+		private MobileServiceCallback<E> callback;
 		
-		HandlerDecorator(Handler handler, MobileServiceCallback callback) {
+		HandlerDecorator(Handler handler, MobileServiceCallback<E> callback) {
 			this.handler = handler;
 			this.callback = callback;
 		}
 		
-		public void completedSuccessfully() {
+		public void completedSuccessfully(final E item) {
 			handler.post(new Runnable() {
 				public void run() {
-					callback.completedSuccessfully();
+					callback.completedSuccessfully(item);
 				}
 			});
 		}
@@ -170,8 +170,8 @@ public class MobileTable<E> {
 	 * 					error if one occurred
 	 * @param handler	callbacks are posted to this handler
 	 */
-	public void insertAsync(E item, MobileServiceCallback callback, Handler handler) {
-		insertAsyncCore(item, new HandlerDecorator(handler, callback));
+	public void insertAsync(E item, MobileServiceCallback<E> callback, Handler handler) {
+		insertAsyncCore(item, new HandlerDecorator<E>(handler, callback));
 	}
 	
 	/**
@@ -183,16 +183,16 @@ public class MobileTable<E> {
 	 * @param callback	the callback invoked on the UI thread when the operation completes,
 	 * 					specifying an error if one occurred
 	 */
-	public void insertAsync(E item, MobileServiceCallback callback) {
+	public void insertAsync(E item, MobileServiceCallback<E> callback) {
 		insertAsync(item, callback, uiHandler);
 	}
 	
-	private void insertAsyncCore(final E item, final MobileServiceCallback callback) {
+	private void insertAsyncCore(final E item, final MobileServiceCallback<E> callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
 					insert(item);
-					callback.completedSuccessfully();
+					callback.completedSuccessfully(item);
 				} catch (MobileException e) {
 					callback.errorOccurred(e);
 				}
@@ -269,8 +269,8 @@ public class MobileTable<E> {
 	 * 					error if one occurred
 	 * @param handler	the callback is posted to this handler
 	 */
-	public void updateAsync(E item, MobileServiceCallback callback, Handler handler) {
-		updateAsyncCore(item, new HandlerDecorator(handler, callback));
+	public void updateAsync(E item, MobileServiceCallback<E> callback, Handler handler) {
+		updateAsyncCore(item, new HandlerDecorator<E>(handler, callback));
 	}
 	
 	/**
@@ -283,16 +283,16 @@ public class MobileTable<E> {
 	 * @param callback	the callback invoked on the UI thread when the operation completes,
 	 * 					specifying an error if one occurred
 	 */
-	public void updateAsync(E item, MobileServiceCallback callback) {
+	public void updateAsync(E item, MobileServiceCallback<E> callback) {
 		updateAsync(item, callback, uiHandler);
 	}
 	
-	private void updateAsyncCore(final E item, final MobileServiceCallback callback) {
+	private void updateAsyncCore(final E item, final MobileServiceCallback<E> callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
 					update(item);
-					callback.completedSuccessfully();
+					callback.completedSuccessfully(item);
 				} catch (MobileException e) {
 					callback.errorOccurred(e);
 				}
@@ -348,8 +348,8 @@ public class MobileTable<E> {
 	 * 					error if one occurred
 	 * @param handler	the callback is posted to this handler
 	 */
-	public void deleteAsync(E item, MobileServiceCallback callback, Handler handler) {
-		deleteAsyncCore(item, new HandlerDecorator(handler, callback));
+	public void deleteAsync(E item, MobileServiceCallback<E> callback, Handler handler) {
+		deleteAsyncCore(item, new HandlerDecorator<E>(handler, callback));
 	}
 	
 	/**
@@ -361,16 +361,16 @@ public class MobileTable<E> {
 	 * @param callback	the callback invoked on the UI thread when the operation completes, specifying
 	 * 					an error if one occurred
 	 */
-	public void deleteAsync(E item, MobileServiceCallback callback) {
+	public void deleteAsync(E item, MobileServiceCallback<E> callback) {
 		deleteAsync(item, callback, uiHandler);
 	}
 	
-	private void deleteAsyncCore(final E item, final MobileServiceCallback callback) {
+	private void deleteAsyncCore(final E item, final MobileServiceCallback<E> callback) {
 		executor.execute(new Runnable() {
 			public void run() {
 				try {
 					delete(item);
-					callback.completedSuccessfully();
+					callback.completedSuccessfully(item);
 				} catch (MobileException e) {
 					callback.errorOccurred(e);
 				}
