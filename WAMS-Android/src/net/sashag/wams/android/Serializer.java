@@ -113,12 +113,17 @@ class Serializer {
 				foundKey = true;
 				field.setAccessible(true);
 				field.set(obj, jsonObject.getInt("id"));
+				continue;
 			}
 			DataMember dataMemberAnnotation = field.getAnnotation(DataMember.class);
 			if (dataMemberAnnotation != null) {
 				String propName = dataMemberAnnotation.value();
 				if (!jsonObject.has(propName)) {
-					throw new InvalidParameterException("The JSON object does not contain a value for field: " + propName);
+					//If a value is missing, the server table may have changed and our local class definition
+					//was not updated. Ideally, this would be an error, but for compatibility purposes with the
+					//other (C#, iOS) SDKs, we simply ignore the field and emit a warning.
+					Log.w("Serializer", "Server JSON object does not contain a value for field: " + propName);
+					continue;
 				}
 				field.setAccessible(true);
 				if (fieldType.equals(int.class) || fieldType.equals(Integer.class)) {
